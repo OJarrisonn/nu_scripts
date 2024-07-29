@@ -1,5 +1,5 @@
 def "nu-complete mise commands" [] {    
-    mise --help 
+    ^mise --help 
     | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
     | str replace --regex --multiline '\n+Options:[\s\S]*' ''
     | lines 
@@ -9,7 +9,7 @@ def "nu-complete mise commands" [] {
 }
 
 def "nu-complete mise alias commands" [] {
-    mise alias --help 
+    ^mise alias --help 
     | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
     | str replace --regex --multiline '\n+Options:[\s\S]*' ''
     | lines 
@@ -19,7 +19,7 @@ def "nu-complete mise alias commands" [] {
 }
 
 def "nu-complete mise backends commands" [] {
-    mise backends --help 
+    ^mise backends --help 
     | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
     | str replace --regex --multiline '\n+Options:[\s\S]*' ''
     | lines 
@@ -29,7 +29,7 @@ def "nu-complete mise backends commands" [] {
 }
 
 def "nu-complete mise cache commands" [] {
-    mise cache --help 
+    ^mise cache --help 
     | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
     | str replace --regex --multiline '\n+Options:[\s\S]*' ''
     | lines 
@@ -39,7 +39,7 @@ def "nu-complete mise cache commands" [] {
 }
 
 def "nu-complete mise config commands" [] {
-    mise config --help 
+    ^mise config --help 
     | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
     | str replace --regex --multiline '\n+Options:[\s\S]*' ''
     | lines 
@@ -49,7 +49,7 @@ def "nu-complete mise config commands" [] {
 }
 
 def "nu-complete mise direnv commands" [] {
-    mise direnv --help 
+    ^mise direnv --help 
     | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
     | str replace --regex --multiline '\n+Options:[\s\S]*' ''
     | lines 
@@ -59,7 +59,17 @@ def "nu-complete mise direnv commands" [] {
 }
 
 def "nu-complete mise generate commands" [] {
-    mise generate --help 
+    ^mise generate --help 
+    | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
+    | str replace --regex --multiline '\n+Options:[\s\S]*' ''
+    | lines 
+    | filter {|line| not ($line | str starts-with "   ")}
+    | str trim
+    | parse -r '(?P<value>\S+) \s*(?P<description>\S.*)'
+}
+
+def "nu-complete mise plugins commands" [] {
+    ^mise plugins --help 
     | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
     | str replace --regex --multiline '\n+Options:[\s\S]*' ''
     | lines 
@@ -88,13 +98,6 @@ def "nu-complete mise aliases" [] {
     | str trim
     | parse -r '(?P<plugin>\S+) \s*(?P<alias>\S+) \s*(?P<version>\S.*)'
     | each {|row| {value: $row.alias, description: $"($row.plugin) ($row.version)"} }
-}
-
-def "nu-complete mise tool-at-version" [] {
-    ^mise p ls --core --user
-    | lines
-    | str trim
-    | each {|line| $"($line)@" }
 }
 
 export extern "mise" [
@@ -294,7 +297,7 @@ export extern "mise doctor" [
 ]
 
 export extern "mise env" [
-    ...tools: string@"nu-complete mise tool-at-version"
+    ...tools: string@"nu-complete mise plugins"
     --json(-J)              # Output in JSON format
     --shell(-s): string@"nu-complete mise activate shells" # Shell type to generate environment variables for
     --cd(-C): path          # Change directory before running command
@@ -305,7 +308,7 @@ export extern "mise env" [
 ]
 
 export extern "mise exec" [
-    ...tools: string@"nu-complete mise tool-at-version"
+    ...tools: string@"nu-complete mise plugins"
     --command(-c): string   # Command to run
     --jobs(-j): int = 4     # Number of jobs to run in parallel [default: 4]
     --raw                   # Directly pipe stdin/stdout/stderr from plugin to user
@@ -347,6 +350,97 @@ export extern "mise generate github-action" [
     --help(-h)              # Print help (see a summary with '-h')
 ]
 
+export extern "mise implode" [
+    --config                # Also remove config directory
+    --dry-run(-n)           # List directories that would be removed without actually removing them
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise install" [
+    ...tools: string
+    --force(-f)             # Force reinstall even if already installed
+    --jobs(-j): int = 4     # Number of jobs to run in parallel [default: 4]
+    --raw                   # Directly pipe stdin/stdout/stderr from plugin to user
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise latest" [
+    tool?: string
+    --installed(-i)         # Show latest installed instead of available version
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise link" [
+    tool?: string
+    path?: path
+    --force(-f)             # Overwrite an existing tool version if it exists
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise ls" [
+    ...plugin: string@"nu-complete mise plugins"    # Only show versions of 
+    --current(-c)           # Only show tool versions currently specified in a .tool-versions/.mise.toml
+    --global(-g)            # Only show tool versions currently specified in a the global .tool-versions/.mise.toml
+    --installed(-i)         # Only show tool versions that are installed
+    --json(-J)              # Output in JSON format
+    --missing(-m)           # Display missing tool versions
+    --no-header             # Don't show table header
+    --prefix: string        # Display versions matching this prefix
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise ls-remote" [
+    tool?: string
+    prefix?: string
+    --all # Show all installed plugins and versions
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise outdated" [
+    ...tool: string@"nu-complete mise plugins"
+    --json(-J)              # Output in JSON format
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise plugins" [
+    --core(-c)              # The built-in plugins only
+    --user                  # List installed plugins
+    --urls(-u)              # Show the git url for each plugin
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
 # Aliases
 export alias "mise a" = mise alias
 export alias "mise b" = mise backends
@@ -355,3 +449,7 @@ export alias "mise dr" = mise doctor
 export alias "mise e" = mise env
 export alias "mise x" = mise exec
 export alias "mise gen" = mise generate
+export alias "mise i" = mise install
+export alias "mise ln" = mise link
+export alias "mise list" = mise ls
+export alias "mise p" = mise plugins

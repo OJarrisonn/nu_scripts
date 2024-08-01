@@ -1,81 +1,66 @@
-def "nu-complete mise commands" [] {    
-    ^mise --help 
-    | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
+def "nu-complete mise parse-help" [] {
+    $in
+    | str replace --regex --multiline '([\s\S]*Commands:\n)' ''
     | str replace --regex --multiline '\n+Options:[\s\S]*' ''
     | lines 
     | filter {|line| not ($line | str starts-with "   ")}
     | str trim
     | parse -r '(?P<value>\S+) \s*(?P<description>\S.*)'
+}
+
+def "nu-complete mise commands" [] {    
+    ^mise --help 
+    | nu-complete mise parse-help
 }
 
 def "nu-complete mise alias commands" [] {
     ^mise alias --help 
-    | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
-    | str replace --regex --multiline '\n+Options:[\s\S]*' ''
-    | lines 
-    | filter {|line| not ($line | str starts-with "   ")}
-    | str trim
-    | parse -r '(?P<value>\S+) \s*(?P<description>\S.*)'
+    | nu-complete mise parse-help
 }
 
 def "nu-complete mise backends commands" [] {
     ^mise backends --help 
-    | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
-    | str replace --regex --multiline '\n+Options:[\s\S]*' ''
-    | lines 
-    | filter {|line| not ($line | str starts-with "   ")}
-    | str trim
-    | parse -r '(?P<value>\S+) \s*(?P<description>\S.*)'
+    | nu-complete mise parse-help
 }
 
 def "nu-complete mise cache commands" [] {
     ^mise cache --help 
-    | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
-    | str replace --regex --multiline '\n+Options:[\s\S]*' ''
-    | lines 
-    | filter {|line| not ($line | str starts-with "   ")}
-    | str trim
-    | parse -r '(?P<value>\S+) \s*(?P<description>\S.*)'
+    | nu-complete mise parse-help
 }
 
 def "nu-complete mise config commands" [] {
     ^mise config --help 
-    | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
-    | str replace --regex --multiline '\n+Options:[\s\S]*' ''
-    | lines 
-    | filter {|line| not ($line | str starts-with "   ")}
-    | str trim
-    | parse -r '(?P<value>\S+) \s*(?P<description>\S.*)'
+    | nu-complete mise parse-help
 }
 
 def "nu-complete mise direnv commands" [] {
     ^mise direnv --help 
-    | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
-    | str replace --regex --multiline '\n+Options:[\s\S]*' ''
-    | lines 
-    | filter {|line| not ($line | str starts-with "   ")}
-    | str trim
-    | parse -r '(?P<value>\S+) \s*(?P<description>\S.*)'
+    | nu-complete mise parse-help
 }
 
 def "nu-complete mise generate commands" [] {
     ^mise generate --help 
-    | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
-    | str replace --regex --multiline '\n+Options:[\s\S]*' ''
-    | lines 
-    | filter {|line| not ($line | str starts-with "   ")}
-    | str trim
-    | parse -r '(?P<value>\S+) \s*(?P<description>\S.*)'
+    | nu-complete mise parse-help
 }
 
 def "nu-complete mise plugins commands" [] {
     ^mise plugins --help 
-    | str replace --regex --multiline '([\s\S]*Commands:\n)' '' 
-    | str replace --regex --multiline '\n+Options:[\s\S]*' ''
-    | lines 
-    | filter {|line| not ($line | str starts-with "   ")}
-    | str trim
-    | parse -r '(?P<value>\S+) \s*(?P<description>\S.*)'
+    | nu-complete mise parse-help
+}
+
+def "nu-complete mise settings commands" [] {
+    ^mise settings --help 
+    | nu-complete mise parse-help
+}
+
+def "nu-complete mise sync commands" [] {
+    ^mise sync --help 
+    | nu-complete mise parse-help
+}
+
+def "nu-complete mise tasks commands" [] {
+    ^mise tasks --help 
+    | nu-complete mise parse-help
 }
 
 def "nu-complete mise activate shells" [] {
@@ -84,6 +69,14 @@ def "nu-complete mise activate shells" [] {
 
 def "nu-complete mise completion shells" [] {
     ["bash", "fish", "zsh"]
+}
+
+def "nu-complete mise sort-columns" [] {
+    ["name", "alias", "description", "source"]
+}
+
+def "nu-complete mise sort-directions" [] {
+    ["asc", "desc"]
 }
 
 def "nu-complete mise plugins" [] {
@@ -107,6 +100,14 @@ def "nu-complete mise plugins all" [] {
         value: ($l | str replace "*" "" | str trim), 
         description: (if ($l | str contains "*") { "installed" } else { "" }) }
     }
+}
+
+def "nu-complete mise tasks all" [] {
+    ^mise t --no-header --hidden
+    | lines
+    | str trim
+    | parse -r '(?P<name>\S+) \s*(?P<description>\S.*) \s*(?P<source>\S.*)'
+    | each {|row| {value: $row.name, description: $"[($row.source)] ($row.description)"} }
 }
 
 export extern "mise" [
@@ -536,7 +537,7 @@ export extern "mise reshim" [
 ]
 
 export extern "mise run" [
-    task?: string
+    task?: string@"nu-complete mise tasks all"
     ...args: string
     --dry-run(-n)           # Don't actually run the tasks(s), just print them in order of execution
     --force(-f)             # Force the tasks to run even if outputs are up to date
@@ -563,6 +564,181 @@ export extern "mise self-update" [
     --help(-h)              # Print help (see a summary with '-h')
 ]
 
+export extern "mise set" [
+    --file: path            # The TOML file to update
+    --global(-g)            # Set the environment variable in the global config file
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise settings" [
+    subcommand?: string@"nu-complete mise settings commands"
+    --keys                  # Only display key names for each setting
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise settings get" [
+    setting?: string
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise settings ls" [
+    --keys                  # Only display key names for each setting
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise settings set" [
+    setting?: string
+    value?: string
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise settings unset" [
+    setting?: string
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise shell" [
+    ...tools: string@"nu-complete mise plugins"
+    --jobs(-j): int = 4     # Number of jobs to run in parallel [default: 4]
+    --raw                   # Directly pipe stdin/stdout/stderr from plugin to user
+    --unset(-u)             # Removes a previously set version    
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise sync" [
+    subcommand?: string@"nu-complete mise sync commands"
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise sync node" [
+    --brew                  # Get tool versions from Homebrew
+    --nvm                   # Get tool versions from NVM
+    --nodenv                # Get tool versions from nodenv
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise sync python" [
+    --pyenv                  # Get tool versions from pyenv
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise tasks" [
+    subcommand?: string@"nu-complete mise tasks commands"
+    --no-header             # Don't show table header
+    --extended(-x)          # Show all columns
+    --hidden                # Show hidden tasks
+    --sort: string@"nu-complete mise sort-columns" = "name" # Sort by column
+    --sort-order: string@"nu-complete mise sort-directions" = "asc" # Sort order
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise tasks deps" [
+    ...tasks: string@"nu-complete mise tasks all"
+    --hidden                # Show hidden tasks
+    --dot                   # Display dependencies in DOT format
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise tasks edit" [
+    task?: string@"nu-complete mise tasks all"
+    --path(-p)              # Display the path to the tasks instead of editing it
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise tasks ls" [
+    --no-header             # Don't show table header
+    --extended(-x)          # Show all columns
+    --hidden                # Show hidden tasks
+    --sort: string@"nu-complete mise sort-columns" = "name" # Sort by column
+    --sort-order: string@"nu-complete mise sort-directions" = "asc" # Sort order
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise tasks run" [
+    task?: string@"nu-complete mise tasks all"
+    ...args: string
+    --dry-run(-n)           # Don't actually run the tasks(s), just print them in order of execution
+    --force(-f)             # Force the tasks to run even if outputs are up to date
+    --prefix(-p)            # Print stdout/stderr by line, prefixed with the tasks's label
+    --interleave(-i)        # Print directly to stdout/stderr instead of by line
+    --tool(-t): string@"nu-complete mise plugins"  # Tool(s) to also add
+    --jobs(-j): int = 4     # Number of jobs to run in parallel [default: 4]
+    --raw(-r)               # Read/write directly to stdin/stdout/stderr instead of by line
+    --timings               # Shows elapsed time after each tasks
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise trust" [
+    config_file?: path
+    --all(-a)               # Trust all config files in the current directory and its parents    
+    --untrust               # No longer trust this config
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
 # Aliases
 export alias "mise a" = mise alias
 export alias "mise b" = mise backends
@@ -576,3 +752,5 @@ export alias "mise ln" = mise link
 export alias "mise list" = mise ls
 export alias "mise p" = mise plugins
 export alias "mise r" = mise run
+export alias "mise sh" = mise shell
+export alias "mise t" = mise tasks

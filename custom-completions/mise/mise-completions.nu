@@ -100,6 +100,15 @@ def "nu-complete mise aliases" [] {
     | each {|row| {value: $row.alias, description: $"($row.plugin) ($row.version)"} }
 }
 
+def "nu-complete mise plugins all" [] {
+    ^mise p ls-remote
+    | lines 
+    | each {|l| {
+        value: ($l | str replace "*" "" | str trim), 
+        description: (if ($l | str contains "*") { "installed" } else { "" }) }
+    }
+}
+
 export extern "mise" [
     subcommand?: string@"nu-complete mise commands"
     --cd(-C): path          # Change directory before running command
@@ -431,9 +440,122 @@ export extern "mise outdated" [
 ]
 
 export extern "mise plugins" [
+    subcommand?: string@"nu-complete mise plugins commands"
     --core(-c)              # The built-in plugins only
     --user                  # List installed plugins
     --urls(-u)              # Show the git url for each plugin
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise plugins install" [
+    ...plugin: string@"nu-complete mise plugins all"
+    --force(-f)             # Reinstall even if plugin exists
+    --all(-a)               # Install all missing plugins
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise plugins link" [
+    name?: string
+    path?: path
+    --force(-f)             # Overwrite existing plugin
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise plugins ls" [
+    --core(-c)              # The built-in plugins only
+    --user                  # List installed plugins
+    --urls(-u)              # Show the git url for each plugin
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise plugins ls-remote" [
+    --only-names            # Only show the name of each plugin
+    --urls(-u)              # Show the git url for each plugin
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise plugins uninstall" [
+    ...plugin: string@"nu-complete mise plugins"
+    --purge(-p)             # Also remove the plugin's installs, downloads, and cache
+    --all(-a)               # Remove all plugins
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise plugins update" [
+    ...plugin: string@"nu-complete mise plugins"
+    --jobs(-j): int = 4     # Number of jobs to run in parallel [default: 4]
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise prune" [
+    ...plugin: string@"nu-complete mise plugins"
+    --dry-run(-n)           # Do not actually delete anything
+    --configs               # Prune only tracked and trusted configuration links that point to non-existent configurations
+    --tools                 # Prune only unused versions of tools
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise reshim" [
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise run" [
+    task?: string
+    ...args: string
+    --dry-run(-n)           # Don't actually run the tasks(s), just print them in order of execution
+    --force(-f)             # Force the tasks to run even if outputs are up to date
+    --prefix(-p)            # Print stdout/stderr by line, prefixed with the tasks's label
+    --interleave(-i)        # Print directly to stdout/stderr instead of by line
+    --tool(-t): string@"nu-complete mise plugins"  # Tool(s) to also add
+    --jobs(-j): int = 4     # Number of jobs to run in parallel [default: 4]
+    --raw(-r)               # Read/write directly to stdin/stdout/stderr instead of by line
+    --timings               # Shows elapsed time after each tasks
+    --cd(-C): path          # Change directory before running command
+    --quiet(-q)             # Suppress non-error messages
+    --verbose(-v)           # Show extra output (use -vv for even more)
+    --yes(-y)               # Answer yes to all confirmation prompts
+    --help(-h)              # Print help (see a summary with '-h')
+]
+
+export extern "mise self-update" [
+    --force                 # Update even if already up to date
+    --no-plugins # Disable auto-updating plugins
     --cd(-C): path          # Change directory before running command
     --quiet(-q)             # Suppress non-error messages
     --verbose(-v)           # Show extra output (use -vv for even more)
@@ -453,3 +575,4 @@ export alias "mise i" = mise install
 export alias "mise ln" = mise link
 export alias "mise list" = mise ls
 export alias "mise p" = mise plugins
+export alias "mise r" = mise run
